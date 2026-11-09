@@ -20,10 +20,27 @@ jobs:
           version: 'latest'
 
       - name: Create kubeconfig
+        env:
+          KUBECONFIG_SECRET: ${{ secrets.KUBECONFIG }}
+          KUBECONFIG_BASE64: ${{ secrets.KUBECONFIG_B64 }}
         run: |
-          mkdir -p $HOME/.kube
-          printf '%s' "${{ secrets.KUBECONFIG }}" > $HOME/.kube/config
-          chmod 600 $HOME/.kube/config
+          mkdir -p "$HOME/.kube"
+
+          if [ -n "${KUBECONFIG_BASE64}" ]; then
+            echo "${KUBECONFIG_BASE64}" | base64 --decode > "$HOME/.kube/config"
+          elif [ -n "${KUBECONFIG_SECRET}" ]; then
+            printf '%s' "${KUBECONFIG_SECRET}" > "$HOME/.kube/config"
+          else
+            echo "Missing kubeconfig secret. Add KUBECONFIG or KUBECONFIG_B64 in GitHub secrets."
+            exit 1
+          fi
+
+          tr -d '\r' < "$HOME/.kube/config" > "$HOME/.kube/config.tmp"
+          mv "$HOME/.kube/config.tmp" "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+          echo "Validating kubeconfig..."
+          kubectl config view --raw >/dev/null
 
       - name: Deploy to Kubernetes
         run: |
