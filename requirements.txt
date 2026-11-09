@@ -12,3 +12,4 @@ python-jose
 python-dotenv
 cachetools
 python-multipart
+pytest
