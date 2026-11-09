@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}-api
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: async-api
+  template:
+    metadata:
+      labels:
+        app: async-api
+    spec:
+      containers:
+        - name: async-api
+          image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"
+          imagePullPolicy: {{ .Values.api.image.pullPolicy }}
+          ports:
+            - containerPort: 8000
+          env:
+            - name: secret_key
+              value: {{ .Values.api.env.secretKey | quote }}
+            - name: Algorithm
+              value: {{ .Values.api.env.algorithm | quote }}
+            - name: DATABASE_URL
+              value: {{ .Values.api.env.databaseUrl | quote }}
+          args:
+            {{- toYaml .Values.api.args | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: async-api-service
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  type: {{ .Values.api.service.type }}
+  selector:
+    app: async-api
+  ports:
+    - port: {{ .Values.api.service.port }}
+      targetPort: {{ .Values.api.service.targetPort }}
